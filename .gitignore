@@ -1,0 +1,153 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+target/
+
+# Compiled files
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs and databases
+*.log
+*.log.*
+hs_err_pid*
+
+# User-specific files
+*.history
+*.histdata
+*.bash_history
+*.mysql_history
+*.pgsql_history
+*.zsh_history
+*.lesshst
+*.sqlite_history
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# JetBrains IDEs
+/.idea
+/*.ipr
+/*.iws
+/*.iml
+/.idea_modules/
+/.idea/
+/*.hprof
+
+# Maven
+log/
+target/
+
+# Gradle
+.gradle/
+build/
+
+# Eclipse
+bin/
+tmp/
+.metadata/
+.classpath
+.project
+.settings/
+*.launch
+
+# Visual Studio Code
+.vscode/
+.settings.json
+
+# Node.js
+/node_modules/
+npm-debug.log*
+
+# Compiled Java classes and JAR files
+*.class
+*.jar
+*.war
+
+# Compiled Kotlin classes
+*.kotlin_class
+
+# Compiled TypeScript
+*.tsbuildinfo
+
+# Compiled Python files
+*.pyc
+
+# Compiled Ruby files
+*.rbc
+
+# Compiled JavaScript
+*.js.map
+
+# Compiled SASS and CSS files
+*.css.map
+*.scss.map
+
+# Compiled TypeScript
+*.d.ts
+
+# Compiled Sass
+*.css
+
+# Compiled LESS
+*.less
+
+# Compiled Stylus
+*.css
+
+# SonarLint
+.sonarlint/
+
+# SonarQube
+.sonar/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Ignore Mac-specific files
+**/.DS_Store
+**/.AppleDouble
+**/.LSOverride
+**/Icon
+**/_*
+**/.Spotlight-V100
+**/.Trashes
+**/ehthumbs.db
+**/Thumbs.db
+
+# Ignore JetBrains IDEs files
+**/.idea
+**/*.iml
+**/*.ipr
+**/*.iws
+**/*.log
+
+# Ignore Eclipse files
+**/bin/
+**/tmp/
+**/*.tmp
+**/*.bak
+**/*.swp
+**/public/js/bundle.js
+
+# JRebel
+.rebel/
+jrebel/
+.rebel-remote.xml
+rebel-remote.xml
+rebel.xml
