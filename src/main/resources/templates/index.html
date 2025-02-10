@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>图片清理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+<!--配置容器居中-->
+<div class="container">
+    <h1 class="text-3xl font-bold mb-4 text-center">Hexo文章图片清理</h1>
+    C:\Users\sfuli\Desktop\blog\source\_posts
+    <div class="mb-4">
+        <div class="flex justify-center items-center">
+            <!-- 选择Hexo的Posts目录     -->
+            <input type="text" id="posts-path" class="w-3/5 h-full rounded-full outline-dotted"
+                   placeholder="请输入Hexo的Posts目录" oninput="syncBackupPath()">
+            <button class="m-2 bg-blue-500 hover:bg-blue-700 w-30px text-white font-bold rounded"
+                    onclick="cleanImages()">
+                开始清理
+            </button>
+            <button class="bg-green-500 hover:bg-green-700 w-30px text-white font-bold rounded" onclick="cleanLog()">
+                清理日志
+            </button>
+        </div>
+        <div id="backup-container" class="w-4/5  h-full mx-auto invisible">
+            <input disabled type="text" id="posts-backup-path"
+                   class="w-full rounded-full outline-dotted disabled:opacity-10"
+                   placeholder="请输入Hexo的备份目录">
+        </div>
+    </div>
+    <!--功能区选项卡 checkbox -->
+    <div class="mt-4 w-4/5 m-auto">
+        <form id="options-form">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <input type="checkbox" id="delete-origin" name="delete-origin" class="accent-pink-500" value="1"
+                           onchange="showbackup()">
+                    <label for="delete-origin" class="ml-2" style="-webkit-user-select: none;">备份</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="accent-pink-500" id="delete-thumb" name="delete-thumb" value="2">
+                    <label for="delete-thumb" class="ml-2" style="-webkit-user-select: none;">删除缩略图</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="accent-pink-500" id="delete-backup" name="delete-backup" value="3">
+                    <label for="delete-backup" class="ml-2" style="-webkit-user-select: none;">删除备份图</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" class="accent-pink-500" id="delete-other" name="delete-other" value="4">
+                    <label for="delete-other" class="ml-2" style="-webkit-user-select: none;">删除其他格式图</label>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!--日志区-->
+    <div class="mt-4 w-4/5 m-auto " id="log-container">
+        <textarea id="logArea" class="w-full h-64 rounded-lg outline-dotted" readonly></textarea>
+    </div>
+</div>
+</body>
+
+<script>
+    function syncBackupPath() {
+        console.log("同步备份目录");
+        var backup = document.getElementById("posts-backup-path");
+        var postPath = document.getElementById("posts-path").value;
+        if (postPath !== "" && postPath.endsWith("/")) {
+            backup.value = postPath.substring(0, postPath.length - 1) + "_backup"; // 设置备份目录
+        } else {
+            backup.value = postPath + "_backup"; // 设置备份目录
+        }
+        showbackup();
+    }
+
+    function cleanLog() {
+        document.getElementById("logArea").value = "";
+    }
+
+    function showbackup() {
+        //判断是否选择了备份选项
+        if (document.getElementById("delete-origin").checked) {
+            //显示备份目录输入框
+            let backupContainer = document.getElementById("backup-container");
+            if (backupContainer !== null && backupContainer.classList.contains("invisible")) { // 如果元素是隐藏的
+                backupContainer.classList.remove("invisible");
+                // 允许设置备份目录
+                var backup = document.getElementById("posts-backup-path");
+                backup.disabled = false;
+                backup.value = document.getElementById("posts-path").value + "_backup"; // 设置备份目录
+            }
+        } else {
+            //隐藏备份目录输入框
+            let backup = document.getElementById("backup-container");
+            if (!backup.classList.contains("invisible")) { // 如果元素是可见的
+                backup.classList.add("invisible");
+                backup.value = ""; // 清空备份目录
+                document.getElementById("posts-backup-path").disabled = false;
+            }
+        }
+    }
+
+    function cleanImages() {
+        let postsPath = document.getElementById("posts-path").value;
+        if (postsPath === "") {
+            alert("请输入Hexo的Posts目录");
+            return;
+        }
+        let backupPath = document.getElementById("posts-backup-path").value;
+        if (document.getElementById("delete-origin").checked) {
+            if (backupPath === "") {
+                alert("请输入Hexo的备份目录");
+                return;
+            }
+        }
+        //获取工具栏目选项列表
+        let options = document.getElementById("options-form").querySelectorAll("input[type='checkbox']:checked");
+        let optionsArray = Array.from(options).map(option => option.value);
+        //重置表单
+        document.getElementById("options-form").reset();
+        // 隐藏备份目录输入框
+        let backupContainer = document.getElementById("backup-container");
+        if (!backupContainer.classList.contains("invisible")) { // 如果元素是可见的
+            backupContainer.classList.add("invisible");
+        }
+        fetch('/api/sse/start-tasks', {
+            method: 'POST',
+            body: JSON.stringify({imageDirectory: postsPath, options: optionsArray, backupPath}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.text())
+            .then(taskId => {
+                const eventSource = new EventSource(`/api/sse/connect/${taskId}`);
+                const textarea = document.getElementById('logArea');
+
+                eventSource.onmessage = (event) => {
+                    // json字符串美化展示
+                    if (event.data.startsWith('{') || event.data.startsWith('[')) {
+                        const data = JSON.parse(event.data);
+                        textarea.value += `${data.timestamp} ${data.message}\n`;
+                    } else {
+                        textarea.value += event.data + '\n';
+                    }
+                    textarea.scrollTop = textarea.scrollHeight; // 自动滚动到底部
+                    // 检测到任务完成的消息，手动关闭 EventSource
+                    if (event.data.includes("全部任务完成！")) {
+                        eventSource.close();
+                    }
+                };
+                eventSource.onerror = (error) => {
+                    console.error('SSE连接错误:', error);
+                    eventSource.close();
+                };
+            });
+
+    }
+
+</script>
+</html>
