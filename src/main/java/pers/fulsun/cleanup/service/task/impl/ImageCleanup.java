@@ -1,6 +1,7 @@
 package pers.fulsun.cleanup.service.task.impl;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,7 @@ import pers.fulsun.cleanup.model.context.TaskContext;
 import pers.fulsun.cleanup.model.enums.CleanupTaskType;
 import pers.fulsun.cleanup.service.LogService;
 import pers.fulsun.cleanup.service.task.CleanupTask;
+import pers.fulsun.cleanup.utils.FileFinder;
 
 import java.io.*;
 import java.net.URL;
@@ -17,6 +19,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +32,12 @@ public class ImageCleanup implements CleanupTask {
     @Autowired
     private ThreadPoolTaskExecutor cleanupTaskExecutor;
     private static final String IMAGE_REGEX = "!\\[.*?\\]\\((.*?)\\)";
+
+    /**
+     * 图片库地址，用于图片查找
+     */
+    @Value("${image.directory}")
+    private String imageDirectory;
 
     @Override
     public CleanupTaskType getTaskType() {
@@ -204,7 +213,16 @@ public class ImageCleanup implements CleanupTask {
             if (imagePath.contains("/")) {
                 filename = imagePath.substring(imagePath.lastIndexOf("/") + 1);
             }
-            return new File(imageDir, filename);
+            File file = new File(imageDir, filename);
+            if (!file.exists()) {
+                // 如果文件不存在，尝试使用备份目录下全局查找相同名称的文件
+                File backupDir = new File(imageDirectory);
+                if (backupDir.exists()) {
+                    String finalFilename = filename;
+                    return FileFinder.findFileByNameBFS(backupDir, finalFilename);
+                }
+            }
+            return file;
         }
     }
 
