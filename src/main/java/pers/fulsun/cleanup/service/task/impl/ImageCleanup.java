@@ -1,5 +1,7 @@
 package pers.fulsun.cleanup.service.task.impl;
 
+import org.commonmark.node.*;
+import org.commonmark.parser.Parser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
@@ -20,8 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Component
 @Order(2)
@@ -31,7 +31,6 @@ public class ImageCleanup implements CleanupTask {
     private LogService logService;
     @Autowired
     private ThreadPoolTaskExecutor cleanupTaskExecutor;
-    private static final String IMAGE_REGEX = "!\\[.*?\\]\\((.*?)\\)";
 
     /**
      * 图片库地址，用于图片查找
@@ -70,13 +69,11 @@ public class ImageCleanup implements CleanupTask {
         }
         // 等待所有任务完成
         try {
-            // 等待所有任务完成
             latch.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new TaskException("任务执行被中断", e);
         }
-
     }
 
     private void handleImage(File markdownFile, String taskId) {
@@ -85,7 +82,7 @@ public class ImageCleanup implements CleanupTask {
             // 读取 Markdown 文件内容
             String markdownContent = readFileContent(markdownFile);
 
-            // 提取图片链接
+            // 使用 CommonMark 解析 Markdown 并提取图片链接
             List<String> imagePaths = extractImageUrls(markdownContent);
 
             String markdownFileName = markdownFile.getName().replace(".md", "");
@@ -144,20 +141,13 @@ public class ImageCleanup implements CleanupTask {
         } catch (Exception e) {
             logService.sendLog(taskId, e.getMessage());
         }
-
     }
 
-    /**
-     * 将内容写入文件
-     */
+    // 其他方法保持不变...
     private void writeFileContent(File file, String content) throws IOException {
         Files.write(file.toPath(), content.getBytes());
     }
 
-
-    /**
-     * 获取文件扩展名
-     */
     private String getFileExtension(String fileName) {
         int lastDotIndex = fileName.lastIndexOf('.');
         if (lastDotIndex > 0) {
@@ -166,9 +156,6 @@ public class ImageCleanup implements CleanupTask {
         return "";
     }
 
-    /**
-     * 计算文件的 MD5 值
-     */
     private String calculateMD5(File file) throws Exception {
         try (InputStream inputStream = new FileInputStream(file)) {
             MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -186,9 +173,6 @@ public class ImageCleanup implements CleanupTask {
         }
     }
 
-    /**
-     * 解析图片路径为 File 对象
-     */
     private File resolveImageFile(File imageDir, String imagePath) {
         if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
             // 如果是网络图片，下载到临时目录
@@ -226,29 +210,35 @@ public class ImageCleanup implements CleanupTask {
         }
     }
 
+    /**
+     * 使用 CommonMark 解析 Markdown 并提取图片链接
+     */
     private List<String> extractImageUrls(String markdownContent) {
         List<String> imageUrls = new ArrayList<>();
-        Pattern pattern = Pattern.compile(IMAGE_REGEX);
-        Matcher matcher = pattern.matcher(markdownContent);
-        while (matcher.find()) {
-            // 匹配到的图片链接
-            imageUrls.add(matcher.group(1));
-        }
+        Parser parser = Parser.builder().build();
+        Node document = parser.parse(markdownContent);
+
+        // 自定义 Visitor 提取图片链接
+        document.accept(new AbstractVisitor() {
+            @Override
+            public void visit(Image image) {
+                // 获取图片的 URL
+                String imageUrl = image.getDestination();
+                imageUrls.add(imageUrl);
+                super.visit(image);
+            }
+        });
+
         return imageUrls;
     }
 
-    private void readImage(String imageUrl, String taskId) {
-    }
-
     private String readFileContent(File markdownFile) throws IOException {
-        //  return new String(Files.readAllBytes(file.toPath()));
         StringBuilder content = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(markdownFile))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 content.append(line).append("\n");
             }
-
         }
         return content.toString();
     }
